@@ -1,23 +1,20 @@
 ﻿using System;
-using GameStates;
 using Leguar.TotalJSON;
 using SaveSystem;
-using UI;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 using UnityEngine;
-using GameAnalyticsSDK;
 
-public abstract class GameDataManager : RuntimeScriptableSingleton<GameDataManager>, ISaveLoadAsJson
+public abstract class BaseGameDataManager : RuntimeScriptableSingleton<BaseGameDataManager>
 {
     public static event Action OnLoadDone;
     public static event Action<JSON> OnSaveDataRequest;
     public static event Action<JSON> OnLoadDataRequest;
 
-    public int CurrentVersion => {get;} = 0
-    public abstract string RootKey {get;} = "Root"
-    public static string FileName {get;} = "Save"
+    public virtual int CurrentVersion {get;} =0;
+    public virtual string RootKey { get; } = "Root";
+    public virtual string FileName { get; } = "Save";
 
     private static bool _isAutoSaveEnabled = false;
 
@@ -41,11 +38,6 @@ public abstract class GameDataManager : RuntimeScriptableSingleton<GameDataManag
     }
 
     private JSON _localData;
-
-    [RuntimeInitializeOnLoadMethod]
-    public static void Initialize()
-    {
-    }
 
     public static JSON GetSaveData()
     {
@@ -76,19 +68,6 @@ public abstract class GameDataManager : RuntimeScriptableSingleton<GameDataManag
         throw new System.NotImplementedException();
     }
 
-    public static void Register(ISaveLoadAsJson target)
-    {
-        Debug.Log($"<color=cyan>GameDataSystem</color> Sub system registered: <color=white>{target.GetType()}</color>");
-        OnSaveDataRequest += target.SaveData;
-        OnLoadDataRequest += target.LoadData;
-    }
-
-    public static void Unregister(ISaveLoadAsJson target)
-    {
-        OnSaveDataRequest -= target.SaveData;
-        OnLoadDataRequest -= target.LoadData;
-    }
-
 #if UNITY_EDITOR
     [MenuItem("SaveAndLoad/Save")]
 #endif
@@ -96,13 +75,12 @@ public abstract class GameDataManager : RuntimeScriptableSingleton<GameDataManag
 
     public static void Save(bool forceSave)
     {
-        if (GeneralGameplayManager.Instance.IsRecordingVideo) return;
         if (!forceSave && !IsAutoSaveEnabled)
         {
             Debug.Log($" Save request <color=yellow> Denied </color> | ForceSave:{forceSave}  AutoSave:{IsAutoSaveEnabled}");
             return;
         }
-        SaveLoadManager.SaveEncryptedJson(GetSaveData(), FileName, EncriptionKey);
+        SaveLoadManager.SaveEncryptedJson(GetSaveData(), Instance.FileName, Instance.EncriptionKey);
         Debug.Log($"Save request: <color=green>  Success </color> | ForceSave:{forceSave} AutoSave:{IsAutoSaveEnabled}");
     }
     
@@ -111,10 +89,10 @@ public abstract class GameDataManager : RuntimeScriptableSingleton<GameDataManag
 #endif
     public static void Load()
     {
-        if (SaveLoadManager.Exists(SaveLoadManager.GetFilePath(FileName)))
-            SetSaveData(SaveLoadManager.LoadEncryptedJson(FileName, EncriptionKey));
+        if (SaveLoadManager.Exists(SaveLoadManager.GetFilePath(Instance.FileName)))
+            SetSaveData(SaveLoadManager.LoadEncryptedJson(Instance.FileName, Instance.EncriptionKey));
         else
-            Debug.Log($"FileName:{SaveLoadManager.GetFilePath(FileName)} doesnt exists");
+            Debug.Log($"FileName:{SaveLoadManager.GetFilePath(Instance.FileName)} doesnt exists");
         
         OnLoadDone?.Invoke();
     }
@@ -126,10 +104,10 @@ public abstract class GameDataManager : RuntimeScriptableSingleton<GameDataManag
         #if UNITY_EDITOR
         if(Application.isPlaying)
         #endif
-            SaveLoadManager.Delete(FileName);
+            SaveLoadManager.Delete(Instance.FileName);
         #if UNITY_EDITOR
         else if (EditorUtility.DisplayDialog("Cuidado", "Esta por borrar los datos locales ¿esta seguro?", "Aceptar", "Cancelar"))
-            SaveLoadManager.Delete(FileName);
+            SaveLoadManager.Delete(Instance.FileName);
         #endif
     }
 }
