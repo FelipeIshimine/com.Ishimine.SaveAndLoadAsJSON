@@ -28,7 +28,7 @@ public abstract class BaseGameDataManager : RuntimeScriptableSingleton<BaseGameD
         }
     }
 
-    private int EncriptionKey
+    private int EncryptionKey
     {
 #if UNITY_EDITOR
         get => 0;
@@ -80,7 +80,7 @@ public abstract class BaseGameDataManager : RuntimeScriptableSingleton<BaseGameD
             Debug.Log($" Save request <color=yellow> Denied </color> | ForceSave:{forceSave}  AutoSave:{IsAutoSaveEnabled}");
             return;
         }
-        SaveLoadManager.SaveEncryptedJson(GetSaveData(), Instance.FileName, Instance.EncriptionKey);
+        SaveLoadManager.SaveEncryptedJson(GetSaveData(), Instance.FileName, Instance.EncryptionKey);
         Debug.Log($"Save request: <color=green>  Success </color> | ForceSave:{forceSave} AutoSave:{IsAutoSaveEnabled}");
     }
     
@@ -90,7 +90,7 @@ public abstract class BaseGameDataManager : RuntimeScriptableSingleton<BaseGameD
     public static void Load()
     {
         if (SaveLoadManager.Exists(SaveLoadManager.GetFilePath(Instance.FileName)))
-            SetSaveData(SaveLoadManager.LoadEncryptedJson(Instance.FileName, Instance.EncriptionKey));
+            SetSaveData(SaveLoadManager.LoadEncryptedJson(Instance.FileName, Instance.EncryptionKey));
         else
             Debug.Log($"FileName:{SaveLoadManager.GetFilePath(Instance.FileName)} doesnt exists");
         
