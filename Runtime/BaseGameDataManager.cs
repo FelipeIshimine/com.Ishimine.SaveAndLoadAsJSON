@@ -6,6 +6,9 @@ using UnityEditor;
 #endif
 using UnityEngine;
 
+/// <summary>
+/// Clase principal para centralizar un archivo de guardado. Los objetos/sistemas que requieran guardar y cargar datos deben registrarse a traves del metodo "Register" e implementar la interfaz ISaveAsJSON
+/// </summary>
 public abstract class BaseGameDataManager : RuntimeScriptableSingleton<BaseGameDataManager>
 {
     public static event Action OnLoadDone;
@@ -66,6 +69,20 @@ public abstract class BaseGameDataManager : RuntimeScriptableSingleton<BaseGameD
     public void UpdateSaveData(JSON data)
     {
         throw new System.NotImplementedException();
+    }
+    
+    
+    public static void Register(ISaveLoadAsJson target)
+    {
+        Debug.Log($"<color=cyan>GameDataSystem</color> Sub system registered: <color=white>{target.GetType()}</color>");
+        OnSaveDataRequest += target.SaveData;
+        OnLoadDataRequest += target.LoadData;
+    }
+
+    public static void Unregister(ISaveLoadAsJson target)
+    {
+        OnSaveDataRequest -= target.SaveData;
+        OnLoadDataRequest -= target.LoadData;
     }
 
 #if UNITY_EDITOR
