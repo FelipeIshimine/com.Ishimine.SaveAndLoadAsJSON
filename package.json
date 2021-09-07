@@ -1,7 +1,7 @@
 {
-  "name": "ishimine.saveandloadasjson",
-  "displayName": "Felipe Ishimine - Save and Load as JSON",
+  "name": "gameever.saveandloadasjson",
+  "displayName": "Game Ever - Save and Load as JSON",
   "version": "1.0.1",
   "unity": "2019.2",
-  "description": "Systema para centralizar guardado de datos. \nVer clase BaseGameDataManager"
+  "description": "Sistema para centralizar guardado de datos. \nVer clase BaseGameDataManager"
 }
