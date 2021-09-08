@@ -9,29 +9,28 @@ using UnityEngine;
 /// <summary>
 /// Clase principal para centralizar un archivo de guardado. Los objetos/sistemas que requieran guardar y cargar datos deben registrarse a traves del metodo "Register" e implementar la interfaz ISaveAsJSON
 /// </summary>
-public abstract class BaseGameDataManager : RuntimeScriptableSingleton<BaseGameDataManager>
+public abstract class BaseGameDataManager<T> : RuntimeScriptableSingleton<T> where T : BaseGameDataManager<T>
 {
     public static event Action OnLoadDone;
     public static event Action<JSON> OnSaveDataRequest;
     public static event Action<JSON> OnLoadDataRequest;
 
-    public virtual int CurrentVersion {get;} =0;
-    public virtual string RootKey { get; } = "Root";
     public virtual string FileName { get; } = "Save";
 
-    private static bool _isAutoSaveEnabled = false;
+    [SerializeField] private bool isAutoSaveEnabled = false;
+    public JSON LocalData { get; set; }
 
     public static bool IsAutoSaveEnabled
     {
-        get => _isAutoSaveEnabled;
+        get => Instance.isAutoSaveEnabled;
         set
         {
             Debug.Log($"<color=yellow>    |||     </color> AutoSave:{value}");
-            _isAutoSaveEnabled = value;
+            Instance.isAutoSaveEnabled = value;
         }
     }
 
-    private int EncryptionKey
+    protected int EncryptionKey
     {
 #if UNITY_EDITOR
         get => 0;
@@ -39,8 +38,6 @@ public abstract class BaseGameDataManager : RuntimeScriptableSingleton<BaseGameD
         get => 1235468495 / 2;
 #endif
     }
-
-    private JSON _localData;
 
     public static JSON GetSaveData()
     {
@@ -51,27 +48,10 @@ public abstract class BaseGameDataManager : RuntimeScriptableSingleton<BaseGameD
 
     public static void SetSaveData(JSON json)
     {
-        Instance._localData = json;
+        Instance.LocalData = json;
         OnLoadDataRequest?.Invoke(json);
     }
 
-    public JSON GetSave()
-    {
-        JSON data = new JSON();
-        data.Add("VERSION", CurrentVersion);
-        return data;
-    }
-
-    public void Load(JSON data)
-    {
-    }
-
-    public void UpdateSaveData(JSON data)
-    {
-        throw new System.NotImplementedException();
-    }
-    
-    
     public static void Register(ISaveLoadAsJson target)
     {
         Debug.Log($"<color=cyan>GameDataSystem</color> Sub system registered: <color=white>{target.GetType()}</color>");
@@ -85,9 +65,6 @@ public abstract class BaseGameDataManager : RuntimeScriptableSingleton<BaseGameD
         OnLoadDataRequest -= target.LoadData;
     }
 
-#if UNITY_EDITOR
-    [MenuItem("SaveAndLoad/Save")]
-#endif
     public static void Save() => Save(false);
 
     public static void Save(bool forceSave)
@@ -100,10 +77,7 @@ public abstract class BaseGameDataManager : RuntimeScriptableSingleton<BaseGameD
         SaveLoadManager.SaveEncryptedJson(GetSaveData(), Instance.FileName, Instance.EncryptionKey);
         Debug.Log($"Save request: <color=green>  Success </color> | ForceSave:{forceSave} AutoSave:{IsAutoSaveEnabled}");
     }
-    
-#if UNITY_EDITOR
-    [MenuItem("SaveAndLoad/Load")]
-#endif
+
     public static void Load()
     {
         if (SaveLoadManager.Exists(SaveLoadManager.GetFilePath(Instance.FileName)))
@@ -113,9 +87,7 @@ public abstract class BaseGameDataManager : RuntimeScriptableSingleton<BaseGameD
         
         OnLoadDone?.Invoke();
     }
-    #if UNITY_EDITOR
-    [MenuItem("SaveAndLoad/Erase")]
-    #endif
+   
     public static void Erase()
     {
         #if UNITY_EDITOR
