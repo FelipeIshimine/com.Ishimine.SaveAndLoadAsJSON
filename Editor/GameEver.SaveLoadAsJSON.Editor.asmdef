@@ -1,0 +1,18 @@
+{
+    "name": "GameEver.SaveLoadAsJSON.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:7ad625cad00447343b034b89b70d6792"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
