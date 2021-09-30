@@ -15,6 +15,8 @@ public abstract class BaseGameDataManager<T> : RuntimeScriptableSingleton<T> whe
     public static event Action<JSON> OnSaveDataRequest;
     public static event Action<JSON> OnLoadDataRequest;
 
+    public static event Action OnFirstLoad;
+    
     public virtual string FileName { get; } = "Save";
 
     [SerializeField] private bool isAutoSaveEnabled = false;
@@ -38,6 +40,8 @@ public abstract class BaseGameDataManager<T> : RuntimeScriptableSingleton<T> whe
         get => 1235468495 / 2;
 #endif
     }
+
+    private bool _isFirstLoad = true;
 
     public static JSON GetSaveData()
     {
@@ -86,6 +90,12 @@ public abstract class BaseGameDataManager<T> : RuntimeScriptableSingleton<T> whe
             Debug.Log($"FileName:{SaveLoadManager.GetFilePath(Instance.FileName)} doesnt exists");
         
         OnLoadDone?.Invoke();
+        if (Instance._isFirstLoad)
+        {
+            Debug.LogWarning($"{Instance} FIRST LOAD");
+            OnFirstLoad?.Invoke();
+            Instance._isFirstLoad = false;
+        }
     }
    
     public static void Erase()

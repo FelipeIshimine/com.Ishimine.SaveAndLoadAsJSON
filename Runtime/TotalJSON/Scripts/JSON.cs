@@ -1168,7 +1168,8 @@ namespace Leguar.TotalJSON {
 			this.debugIdForExceptions = debugIdForExceptions;
 		}
 
-		private string getExceptionMessageTail() {
+		private string getExceptionMessageTail() 
+		{
 			return InternalTools.getExceptionMessageTailForID(debugIdForExceptions,"JSON");
 		}
 
@@ -1179,8 +1180,17 @@ namespace Leguar.TotalJSON {
 				value = Get(key) as T;
 				return true;
 			}
-
 			value = null;
+			return false;
+		}
+		
+		public bool TryGet(string key, ref bool value)
+		{
+			if (TryGet(key, out JBoolean jValue))
+			{
+				value = jValue.AsBool();
+				return true;
+			}
 			return false;
 		}
 	}
