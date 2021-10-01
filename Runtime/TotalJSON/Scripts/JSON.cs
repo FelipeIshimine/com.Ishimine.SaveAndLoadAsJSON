@@ -1193,6 +1193,16 @@ namespace Leguar.TotalJSON {
 			}
 			return false;
 		}
+		
+		public bool TryGet(string key, ref int value)
+		{
+			if (TryGet(key, out JNumber jValue))
+			{
+				value = jValue.AsInt();
+				return true;
+			}
+			return false;
+		}
 	}
 
 }
