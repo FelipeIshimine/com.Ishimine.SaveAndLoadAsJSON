@@ -14,6 +14,7 @@ public abstract class BaseGameDataManager<T> : RuntimeScriptableSingleton<T> whe
     public static event Action OnLoadDone;
     public static event Action<JSON> OnSaveDataRequest;
     public static event Action<JSON> OnLoadDataRequest;
+    public static event Action<JSON> OnEraseDataRequest;
 
     public static event Action OnFirstLoad;
     
