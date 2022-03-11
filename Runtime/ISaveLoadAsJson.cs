@@ -12,6 +12,7 @@ namespace SaveSystem
     
     public interface ISaveLoadAsJson : IJson
     {
+        JSON Data { get; }
         int CurrentVersion { get; }
         string RootKey { get; }
         /// <summary>
@@ -39,7 +40,8 @@ namespace SaveSystem
 
         public static void SaveData(this ISaveLoadAsJson source, JSON mainData)
         {
-            JSON saveData = source.GetSave();
+            var saveData = source.GetSave();
+            if (saveData == null) return;
             saveData.AddOrReplace(VersionKey, source.CurrentVersion);
             mainData.Add(source.RootKey, saveData);
         }
