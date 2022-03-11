@@ -44,7 +44,7 @@ public static class SaveLoadManager
         string filePath = GetFilePath(fileName);
         File.WriteAllText(filePath, data);
         
-        Debug.Log($"File saved at:{filePath}");
+        Debug.Log($"<color=green>File saved </color> at:{filePath}");
     }
     
     public static string LoadText(string fileName)
