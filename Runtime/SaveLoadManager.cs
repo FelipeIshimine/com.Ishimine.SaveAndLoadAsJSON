@@ -58,10 +58,10 @@ public static class SaveLoadManager
         File.Delete(GetFilePath(fileName));
     }
     
-     public static void SaveEncryptedJson(JSON json, string fileName, int encriptionKey = 0)
+     public static void SaveEncryptedJson(JSON json, string fileName, int encryptionKey = 0)
     {
-        string rawData = json.CreatePrettyString();
-        if (encriptionKey != 0) rawData = SecureHelper.EncryptDecrypt(rawData, encriptionKey);
+        string rawData = Application.isEditor?json.CreatePrettyString():json.CreateString();
+        if (encryptionKey != 0) rawData = SecureHelper.EncryptDecrypt(rawData, encryptionKey);
         SaveLoadManager.SaveText(fileName, rawData);
     }
 
@@ -70,8 +70,7 @@ public static class SaveLoadManager
         Debug.Log($"Loading: {fileName}");
         string rawData = SaveLoadManager.LoadText(fileName);
         if (encriptionKey != 0) rawData = SecureHelper.EncryptDecrypt(rawData, encriptionKey);
-        JSON data = JSON.ParseString(rawData);  
-        return data;
+        return JSON.ParseString(rawData);
     }
 }
 
