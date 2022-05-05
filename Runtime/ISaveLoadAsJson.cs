@@ -12,7 +12,7 @@ namespace SaveSystem
     
     public interface ISaveLoadAsJson : IJson
     {
-        JSON Data { get; }
+        JSON Data { get; set;}
         int CurrentVersion { get; }
         string RootKey { get; }
         /// <summary>
@@ -50,10 +50,11 @@ namespace SaveSystem
         {
             if(!mainData.ContainsKey(source.RootKey)) return;
             JSON loadData = mainData.GetJSON(source.RootKey);
-            if (!mainData.ContainsKey(source.RootKey))
-                return;
+            
             if (IsOldVersion(source, loadData))
                 source.UpdateSaveData(loadData);
+
+            source.Data = loadData;
             source.Load(loadData);
         }
     }
