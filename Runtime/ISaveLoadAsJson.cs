@@ -66,5 +66,4 @@ namespace SaveSystem
         public abstract JValue GetSave();
         public abstract void Load(JValue data);
     }
-   
 }
