@@ -19,11 +19,11 @@ namespace SaveSystem
 
         public Action<JSON> OnUpdateAction { get; set; }
 
-        public void LoadFromFile() => Load(SaveLoadManager.LoadEncryptedJson(Name, _encryptionKey));
+        public void LoadFromDisk() => Load(SaveLoadManager.LoadEncryptedJson(Name, _encryptionKey));
 
-        public void SaveToFile() => SaveLoadManager.SaveEncryptedJson(GetSave(), Name, _encryptionKey);
+        public void SaveToDisk() => SaveLoadManager.SaveEncryptedJson(GetSave(), Name, _encryptionKey);
 
-        public void EraseFile() => SaveLoadManager.Delete(Name);
+        public void Erase() => SaveLoadManager.Delete(Name);
 
         public void Register(ISaveLoadAsJson source)
         {
