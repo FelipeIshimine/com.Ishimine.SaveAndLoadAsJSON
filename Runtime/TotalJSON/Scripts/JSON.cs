@@ -1184,23 +1184,26 @@ namespace Leguar.TotalJSON {
 			return false;
 		}
 		
-		public bool TryGet(string key, ref bool value)
+		public bool TryGet(string key, out bool value)
 		{
 			if (TryGet(key, out JBoolean jValue))
 			{
 				value = jValue.AsBool();
 				return true;
 			}
+
+			value = default;
 			return false;
 		}
 		
-		public bool TryGet(string key, ref int value)
+		public bool TryGet(string key, out int value)
 		{
 			if (TryGet(key, out JNumber jValue))
 			{
 				value = jValue.AsInt();
 				return true;
 			}
+			value = default;
 			return false;
 		}
 	}
