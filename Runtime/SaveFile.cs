@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Leguar.TotalJSON;
 
 namespace SaveSystem
@@ -14,47 +15,42 @@ namespace SaveSystem
             _encryptionKey = encryptionKey;
         }
 
-        private event Action<JSON> OnLoad; 
-        private event Action<JSON> OnSave;
+        private readonly Dictionary<string,ISaveLoadAsJson> _sources = new Dictionary<string,ISaveLoadAsJson>(128);
 
         public Action<JSON> OnUpdateAction { get; set; }
 
-        public void LoadFromDisk() => Load(SaveLoadManager.LoadEncryptedJson(Name, _encryptionKey));
+        public void LoadFromDisk() => this.Load(SaveLoadManager.LoadEncryptedJson(Name, _encryptionKey));
 
-        public void SaveToDisk() => SaveLoadManager.SaveEncryptedJson(GetSave(), Name, _encryptionKey);
+        public void SaveToDisk() => SaveLoadManager.SaveEncryptedJson(this.Save(), Name, _encryptionKey);
 
         public void Erase() => SaveLoadManager.Delete(Name);
 
         public void Register(ISaveLoadAsJson source)
         {
-            OnLoad += source.LoadData;
-            OnSave += source.SaveData;
+            _sources.Add(source.RootKey,source);
         }
     
         public void Unregister(ISaveLoadAsJson source)
         {
-            OnLoad -= source.LoadData;
-            OnSave -= source.SaveData;
+            _sources.Remove(source.RootKey);
         }
 
-
-        public JSON Data { get; set; } = new JSON();
+        public JSON SaveData { get; set; } = new JSON();
         public int CurrentVersion { get; set; } = 0;
         public string RootKey => Name;
         public void UpdateSaveData(JSON data) => OnUpdateAction?.Invoke(data);
         
-        public JSON GetSave()
+        public void OnBeforeSave()
         {
-            Data.Clear();
-            OnSave?.Invoke(Data);
-            return Data;
+            SaveData.Clear();
+            foreach (ISaveLoadAsJson saveLoadAsJson in _sources.Values)
+                SaveData.Save(saveLoadAsJson);
         }
 
-        public void Load(JSON data)
+        public void OnAfterLoad()
         {
-            Data = data;
-            OnLoad?.Invoke(Data);
+            foreach (ISaveLoadAsJson saveLoadAsJson in _sources.Values)
+                saveLoadAsJson.Load(SaveData);
         }
-
     }
 }

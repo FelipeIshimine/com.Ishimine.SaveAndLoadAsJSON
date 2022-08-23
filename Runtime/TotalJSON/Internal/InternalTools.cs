@@ -15,6 +15,11 @@ namespace Leguar.TotalJSON.Internal {
 	class InternalTools {
 
 		internal static JValue objectAsJValue(object value) {
+			List<object> stack = new List<object>();
+			return objectAsJValue(value, stack);
+		}
+
+		private static JValue objectAsJValue(object value, List<object> stack) {
 
 			// Single object?
 			JValue jValue=singleObjectAsJValue(value);
@@ -24,12 +29,12 @@ namespace Leguar.TotalJSON.Internal {
 
 			// Dictionary
 			if (value is IDictionary) {
-				return (new JSON((IDictionary)(value)));
+				return dictionaryToJSON((IDictionary)(value), new JSON(), stack);
 			}
 
 			// List/array
 			if (value is IList) {
-				return (new JArray((IList)(value)));
+				return listToJArray((IList)(value), new JArray(), stack);
 			}
 
 			// Unknown, handled by caller
@@ -37,8 +42,54 @@ namespace Leguar.TotalJSON.Internal {
 
 		}
 
-		// TODO: This actually never returns null atm
+		internal static JSON dictionaryToJSON(IDictionary sourceDictionary, JSON targetJSON, List<object> stack) {
+			stack.Add(sourceDictionary);
+			foreach (object objectKey in sourceDictionary.Keys) {
+				if (objectKey==null) { // Dictionary can't have null keys though because calculating hash wouldn't work? No harm to check anyway
+					throw (new JArgumentException("Dictionary 'key' can not be null", "sourceDictionary"));
+				}
+				if (!(objectKey is string)) {
+					throw (new JArgumentException("Key have to be string in JSON.<init>(IDictionary) constructor", "sourceDictionary"));
+				}
+				string stringKey = (string)(objectKey);
+				object objectValue = sourceDictionary[objectKey];
+				if (stack.Contains(objectValue)) {
+					throw (new JArgumentException("Dictionary value is referring to earlier object. This would cause circular JSON.", "sourceDictionary[\""+stringKey+"\"]"));
+				}
+				JValue jValue = InternalTools.objectAsJValue(objectValue, stack);
+				if (jValue==null) {
+					throw (new UnknownObjectTypeException(objectValue, "sourceDictionary[\""+stringKey+"\"]"));
+				}
+				targetJSON.Add(stringKey, jValue);
+			}
+			stack.Remove(sourceDictionary);
+			return targetJSON;
+		}
+
+		internal static JArray listToJArray(IList sourceList, JArray targetJArray, List<object> stack) {
+			stack.Add(sourceList);
+			for (int n = 0; n<sourceList.Count; n++) {
+				object listItem = sourceList[n];
+				if (stack.Contains(listItem)) {
+					throw (new JArgumentException("List item is referring to earlier object. This would cause circular JSON.", "sourceList["+n+"]"));
+				}
+				JValue jValue = InternalTools.objectAsJValue(listItem, stack);
+				if (jValue==null) {
+					throw (new UnknownObjectTypeException(listItem, "sourceList["+n+"]"));
+				}
+				targetJArray.Add(jValue);
+			}
+			stack.Remove(sourceList);
+			return targetJArray;
+		}
+
 		internal static JValue serializeObject(object obj, SerializeSettings serializeSettings) {
+			List<object> stack = new List<object>();
+			return serializeObject(obj, serializeSettings, stack);
+		}
+
+		// This never returns null
+		private static JValue serializeObject(object obj, SerializeSettings serializeSettings, List<object> stack) {
 
 			JValue singleValue=singleObjectAsJValue(obj);
 			if (singleValue!=null) {
@@ -48,13 +99,19 @@ namespace Leguar.TotalJSON.Internal {
 			if (obj is IList) {
 				JArray jArray = new JArray();
 				IList list = (IList)(obj);
+				stack.Add(obj);
 				for (int n=0; n<list.Count; n++) {
-					JValue jValue=serializeObject(list[n], serializeSettings);
+					object listItem = list[n];
+					if (stack.Contains(listItem)) {
+						throw (new SerializeException("List item is referring to earlier object. This would cause circular JSON.", listItem));
+					}
+					JValue jValue=serializeObject(listItem, serializeSettings, stack);
 					if (jValue==null) {
-						throw (new SerializeException("List item is type that can't be serialized",list[n]));
+						throw (new SerializeException("List item is type that can't be serialized", listItem));
 					}
 					jArray.Add(jValue);
 				}
+				stack.Remove(obj);
 				return jArray;
 			}
 
@@ -68,10 +125,15 @@ namespace Leguar.TotalJSON.Internal {
 						throw (new SerializeException("Dictionary key is type ('"+dictTypes[0]+"') that can't be serialized. Dictionary keys must be strings, or allow more loose options using SerializeSettings"));
 					}
 					IDictionary dict = (IDictionary)(obj);
+					stack.Add(obj);
 					foreach (object objectKey in dict.Keys) {
-						JValue jValue = serializeObject(dict[objectKey], serializeSettings);
+						object dictionaryValue = dict[objectKey];
+						if (stack.Contains(dictionaryValue)) {
+							throw (new SerializeException("Dictionary value is referring to earlier object. This would cause circular JSON.", dictionaryValue));
+						}
+						JValue jValue = serializeObject(dictionaryValue, serializeSettings, stack);
 						if (jValue==null) {
-							throw (new SerializeException("Dictionary item is type that can't be serialized", dict[objectKey]));
+							throw (new SerializeException("Dictionary item is type that can't be serialized", dictionaryValue));
 						}
 						string stringKey;
 						if (dictKeyIsString) {
@@ -81,6 +143,7 @@ namespace Leguar.TotalJSON.Internal {
 						}
 						json.Add(stringKey, jValue);
 					}
+					stack.Remove(obj);
 					return json;
 				}
 			}
@@ -88,17 +151,22 @@ namespace Leguar.TotalJSON.Internal {
 			JSON jsonSer = new JSON();
 
 			FieldInfo[] fieldInfos = obj.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+			stack.Add(obj);
 			foreach (FieldInfo fieldInfo in fieldInfos) {
 				if (isSerializing(fieldInfo, serializeSettings.IgnoreSystemAndUnitySerializeAttributes)) {
 					string fieldName = fieldInfo.Name;
 					object fieldToSerialize = fieldInfo.GetValue(obj);
-					JValue jValue=serializeObject(fieldToSerialize, serializeSettings);
+					if (stack.Contains(fieldToSerialize)) {
+						throw (new SerializeException("Class field is referring to earlier object. This would cause circular JSON.", fieldToSerialize));
+					}
+					JValue jValue = serializeObject(fieldToSerialize, serializeSettings, stack);
 					if (jValue==null) {
 						throw (new SerializeException("Field \""+fieldName+"\" is type that can't be serialized",fieldToSerialize));
 					}
 					jsonSer.Add(fieldName,jValue);
 				}
 			}
+			stack.Remove(obj);
 
 			return jsonSer;
 
@@ -197,6 +265,22 @@ namespace Leguar.TotalJSON.Internal {
 			// Unknown, handled by caller
 			return null;
 
+		}
+
+		internal static object jValueAsSystemObject(JValue jValue) {
+			if (jValue is JSON) {
+				return ((JSON)(jValue)).AsDictionary();
+			} else if (jValue is JArray) {
+				return ((JArray)(jValue)).AsList();
+			} else if (jValue is JNumber) {
+				return ((JNumber)(jValue)).AsObject();
+			} else if (jValue is JString) {
+				return ((JString)(jValue)).AsString();
+			} else if (jValue is JBoolean) {
+				return ((JBoolean)(jValue)).AsBool();
+			} else { // JNull
+				return null;
+			}
 		}
 
 		internal static string getExceptionMessageTailForID(string debugIDForExceptions, string exceptionSource) {

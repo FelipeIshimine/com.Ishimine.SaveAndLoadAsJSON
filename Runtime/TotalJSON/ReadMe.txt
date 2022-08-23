@@ -248,7 +248,7 @@ Full API docs
 
 All the classes have full inline C# documentation that is also available online in HTML format:
 
-http://www.leguar.com/unity/totaljson/apidoc/1.6/
+http://www.leguar.com/unity/totaljson/apidoc/1.7/
 
 
 

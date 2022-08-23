@@ -198,6 +198,10 @@ namespace Leguar.TotalJSON {
 				return this.AsString();
 			}
 
+			if (type==typeof(object) && deserializeSettings.AllowFieldsToBeObjects) {
+				return this.AsString();
+			}
+
 			throw (DeserializeException.forNonMatchingType(this,type,toFieldName));
 
 		}

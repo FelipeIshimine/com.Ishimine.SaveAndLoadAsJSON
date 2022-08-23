@@ -73,6 +73,8 @@ namespace Leguar.TotalJSON {
 				throw (DeserializeException.forNonMatchingType(this,type,toFieldName));
 			}
 
+			// bool canBeNull = !type.IsValueType || (Nullable.GetUnderlyingType(type) != null);
+
 			return null;
 
 		}

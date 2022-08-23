@@ -16,7 +16,7 @@ namespace Leguar.TotalJSON {
 	/// </summary>
 	public class JNumber : JValue {
 
-		private string valueAsString;
+		private readonly string valueAsString;
 
 		/// <summary>
 		/// Creates new JSON number value from string. There is no limits in number size as long as it follows json number format.
@@ -413,6 +413,34 @@ namespace Leguar.TotalJSON {
 			return valueAsString;
 		}
 
+		/// <summary>
+		/// Gets value of this number as object. First fitting value of these are returned: int, long, float, double
+		/// </summary>
+		/// <exception cref="JNumberOverflowException">
+		/// If number stored to this JNumber doesn't fit in double.
+		/// </exception>
+		/// <returns>
+		/// Value as object, that may be one of the 4 basic number objects.
+		/// </returns>
+		public object AsObject() {
+			int iValue;
+			if (int.TryParse(valueAsString, NumberStyles.Integer, CultureInfo.InvariantCulture, out iValue)) {
+				return iValue;
+			}
+			long lValue;
+			if (long.TryParse(valueAsString, NumberStyles.Integer, CultureInfo.InvariantCulture, out lValue)) {
+				return lValue;
+			}
+			float fValue;
+			if (float.TryParse(valueAsString, NumberStyles.Float, CultureInfo.InvariantCulture, out fValue)) {
+				if (!float.IsInfinity(fValue)) {
+					return fValue;
+				}
+			}
+			// This could fail too in extreme cases, but custom exception is thrown
+			return this.AsDouble();
+		}
+
 		internal override void zCreate(CreateStringRunner createStringRunner) {
 			createStringRunner.append(this.AsString());
 		}
@@ -702,6 +730,10 @@ namespace Leguar.TotalJSON {
 			}
 			if (type==typeof(sbyte)) {
 				return this.AsSByte();
+			}
+
+			if (type==typeof(object) && deserializeSettings.AllowFieldsToBeObjects) {
+				return this.AsObject();
 			}
 
 			throw (DeserializeException.forNonMatchingType(this,type,toFieldName));

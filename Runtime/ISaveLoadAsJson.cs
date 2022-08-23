@@ -4,22 +4,19 @@ using UnityEngine;
 
 namespace SaveSystem
 {
-    public interface IJson
+    public interface ISaveLoadAsJson 
     {
-        JSON GetSave();
-        void Load(JSON data);
-    }
-    
-    public interface ISaveLoadAsJson : IJson
-    {
-        JSON Data { get; set;}
+        JSON SaveData { get; set;}
         int CurrentVersion { get; }
         string RootKey { get; }
         /// <summary>
-        /// Ejecutador por ISaveAsJsonUtilities.CheckAndUpdate
+        /// Ejecutado por ISaveAsJsonUtilities.CheckAndUpdate
         /// </summary>
         /// <param name="data"></param>
         void UpdateSaveData(JSON data);
+        
+        void OnBeforeSave();
+        void OnAfterLoad();
     }
 
     /// <summary>
@@ -38,15 +35,22 @@ namespace SaveSystem
             return fileVersion < source.CurrentVersion;
         }
 
-        public static void SaveData(this ISaveLoadAsJson source, JSON mainData)
+        public static JSON Save(this ISaveLoadAsJson @this)
         {
-            var saveData = source.GetSave();
+            @this.OnBeforeSave();
+            return @this.SaveData;
+        }
+        
+        public static void Save(this ISaveLoadAsJson @this, JSON mainData)
+        {
+            @this.OnBeforeSave();
+            var saveData = @this.SaveData;
             if (saveData == null) return;
-            saveData.AddOrReplace(VersionKey, source.CurrentVersion);
-            mainData.Add(source.RootKey, saveData);
+            saveData.AddOrReplace(VersionKey, @this.CurrentVersion);
+            mainData.Add(@this.RootKey, saveData);
         }
 
-        public static void LoadData(this ISaveLoadAsJson source, JSON mainData)
+        public static void Load(this ISaveLoadAsJson source, JSON mainData)
         {
             if(!mainData.ContainsKey(source.RootKey)) return;
             JSON loadData = mainData.GetJSON(source.RootKey);
@@ -54,8 +58,8 @@ namespace SaveSystem
             if (IsOldVersion(source, loadData))
                 source.UpdateSaveData(loadData);
 
-            source.Data = loadData;
-            source.Load(loadData);
+            source.SaveData = loadData;
+            source.OnAfterLoad();
         }
     }
     

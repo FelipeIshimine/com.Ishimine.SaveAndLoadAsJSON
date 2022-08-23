@@ -32,7 +32,9 @@ namespace Leguar.TotalJSON {
 		}
 
 		/// <summary>
-		/// Creates new JSON object from c# dictionary.
+		/// Creates new JSON object from c# dictionary. Note that values in dictionary need to be basic c# objects like string, booleans,
+		/// numbers, or another dictionaries or lists. To turn other classes to JSON object, or for more flexible options, consider using
+		/// static JSON.Serialize() method.
 		/// </summary>
 		/// <param name="sourceKeysAndValues">
 		/// All the keys and values to be added to this JSON.
@@ -42,7 +44,7 @@ namespace Leguar.TotalJSON {
 		/// If parameter is null.
 		/// </exception>
 		/// <exception cref="JArgumentException">
-		/// If any key in dictionary is not string.
+		/// If any exceptions occurs when trying to turn parameter dictionary to new JSON object.
 		/// </exception>
 		/// <exception cref="UnknownObjectTypeException">
 		/// If any value in dictionary is unsupported type.
@@ -51,21 +53,7 @@ namespace Leguar.TotalJSON {
 			if (sourceKeysAndValues==null) {
 				throw (new JArgumentNullException("sourceKeysAndValues","Parameter in constructor JSON.<init>(IDictionary) can not be null"));
 			}
-			foreach (object objectKey in sourceKeysAndValues.Keys) {
-				if (objectKey==null) { // Dictionary can't have null keys though because calculating hash wouldn't work? No harm to check anyway
-					throw (new JArgumentNullException("sourceKeysAndValues","'key' in JSON.<init>(IDictionary) constructor can not be null"));
-				}
-				if (!(objectKey is string)) {
-					throw (new JArgumentException("Key have to be string in JSON.<init>(IDictionary) constructor","sourceKeysAndValues"));
-				}
-				string stringKey=(string)(objectKey);
-				object objectValue=sourceKeysAndValues[objectKey];
-				JValue jValue=InternalTools.objectAsJValue(objectValue);
-				if (jValue==null) {
-					throw (new UnknownObjectTypeException(objectValue,"sourceKeysAndValues[\""+stringKey+"\"]"));
-				}
-				Add(stringKey,jValue);
-			}
+			InternalTools.dictionaryToJSON(sourceKeysAndValues, this, new List<object>());
 		}
 
 		public override string ToString() {
@@ -674,6 +662,23 @@ namespace Leguar.TotalJSON {
 		}
 
 		/// <summary>
+		/// Gets the whole JSON object as system dictionary. This is recursive, so if this JSON contains other JSON objects or lists,
+		/// those will be also changed to system objects.
+		/// </summary>
+		/// <returns>
+		/// Dictionary that doesn't contain any TotalJSON objects on any level.
+		/// </returns>
+		public Dictionary<string, object> AsDictionary() {
+			Dictionary<string, object> targetKeysAndValues = new Dictionary<string, object>();
+			foreach (string key in keyValuePairs.Keys) {
+				JValue jValue = keyValuePairs[key];
+				object oValue = InternalTools.jValueAsSystemObject(jValue);
+				targetKeysAndValues.Add(key, oValue);
+			}
+			return targetKeysAndValues;
+		}
+
+		/// <summary>
 		/// Turns this JSON object to single JSON formatted string that can be easily stored or sent to another system.
 		/// String always starts with character '{' and ends to character '}' and contains no linefeeds.
 		/// </summary>
@@ -1052,8 +1057,6 @@ namespace Leguar.TotalJSON {
 
 		internal override object zDeserialize(Type type, string toFieldName, DeserializeSettings deserializeSettings) {
 
-			object obj = Activator.CreateInstance(type);
-
 			if (type.IsGenericType) {
 				if (type.GetGenericTypeDefinition()==typeof(Dictionary<,>)) {
 					Type[] dictTypes = type.GetGenericArguments();
@@ -1066,7 +1069,8 @@ namespace Leguar.TotalJSON {
 					if (!keyStringType && !keyIntType && !keyLongType) {
 						throw (DeserializeException.forDictionaryKeyTypeNotKnown(dictTypes[0],toFieldName));
 					}
-					IDictionary objDict = (IDictionary)(obj);
+					object objTypeOfDict = Activator.CreateInstance(type);
+					IDictionary objDict = (IDictionary)(objTypeOfDict);
 					foreach (string stringKey in keyValuePairs.Keys) {
 						JValue jValue = keyValuePairs[stringKey];
 						object sValue = jValue.zDeserialize(dictTypes[1], toFieldName, deserializeSettings);
@@ -1078,19 +1082,25 @@ namespace Leguar.TotalJSON {
 							objDict.Add(stringKey, sValue);
 						}
 					}
-					return obj;
+					return objTypeOfDict;
 				}
 			}
 
+			if (type==typeof(object) && deserializeSettings.AllowFieldsToBeObjects) {
+				return this.AsDictionary();
+			}
+
+			object objTypeOfCustom = Activator.CreateInstance(type);
+
 			int jsonValuesUsed = 0;
-			FieldInfo[] fieldInfos = obj.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+			FieldInfo[] fieldInfos = objTypeOfCustom.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 			foreach (FieldInfo fieldInfo in fieldInfos) {
 				if (InternalTools.isSerializing(fieldInfo, deserializeSettings.IgnoreSystemAndUnitySerializeAttributes)) {
 					string fieldName = fieldInfo.Name;
 					if (this.ContainsKey(fieldName)) {
 						JValue jValue = this[fieldName];
 						object sValue = jValue.zDeserialize(fieldInfo.FieldType, fieldName, deserializeSettings);
-						fieldInfo.SetValue(obj, sValue);
+						fieldInfo.SetValue(objTypeOfCustom, sValue);
 						jsonValuesUsed++;
 					} else if (deserializeSettings.RequireAllFieldsArePopulated) {
 						throw (DeserializeException.forNoMatchingField(fieldName, type));
@@ -1101,7 +1111,7 @@ namespace Leguar.TotalJSON {
 				throw (DeserializeException.forNoMatchingValue(type));
 			}
 
-			return obj;
+			return objTypeOfCustom;
 
 		}
 
@@ -1168,44 +1178,10 @@ namespace Leguar.TotalJSON {
 			this.debugIdForExceptions = debugIdForExceptions;
 		}
 
-		private string getExceptionMessageTail() 
-		{
+		private string getExceptionMessageTail() {
 			return InternalTools.getExceptionMessageTailForID(debugIdForExceptions,"JSON");
 		}
 
-		public bool TryGet<T>(string key, out T value) where T : JValue
-		{
-			if (ContainsKey(key))
-			{
-				value = Get(key) as T;
-				return true;
-			}
-			value = null;
-			return false;
-		}
-		
-		public bool TryGet(string key, out bool value)
-		{
-			if (TryGet(key, out JBoolean jValue))
-			{
-				value = jValue.AsBool();
-				return true;
-			}
-
-			value = default;
-			return false;
-		}
-		
-		public bool TryGet(string key, out int value)
-		{
-			if (TryGet(key, out JNumber jValue))
-			{
-				value = jValue.AsInt();
-				return true;
-			}
-			value = default;
-			return false;
-		}
 	}
 
 }

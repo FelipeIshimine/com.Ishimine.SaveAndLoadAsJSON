@@ -60,14 +60,14 @@ public abstract class BaseGameDataManager<T> : RuntimeScriptableSingleton<T> whe
     public static void Register(ISaveLoadAsJson target)
     {
         Debug.Log($"<color=cyan>GameDataSystem</color> Sub system registered: <color=white>{target.GetType()}</color>");
-        OnSaveDataRequest += target.SaveData;
-        OnLoadDataRequest += target.LoadData;
+        OnSaveDataRequest += target.Save;
+        OnLoadDataRequest += target.Load;
     }
 
     public static void Unregister(ISaveLoadAsJson target)
     {
-        OnSaveDataRequest -= target.SaveData;
-        OnLoadDataRequest -= target.LoadData;
+        OnSaveDataRequest -= target.Save;
+        OnLoadDataRequest -= target.Load;
     }
 
     public static void Save() => Save(false);

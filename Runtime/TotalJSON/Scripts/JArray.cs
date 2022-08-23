@@ -27,13 +27,18 @@ namespace Leguar.TotalJSON {
 		}
 
 		/// <summary>
-		/// Creates new JArray object from system list or array of objects.
+		/// Creates new JArray object from system list or array of objects. Note that values in dictionary need to be basic c# objects like
+		/// string, booleans, numbers, or another lists or dictionaries. To turn other classes to JSON object, or for more flexible options,
+		/// consider using static JArray.Serialize() method.
 		/// </summary>
 		/// <param name="sourceValues">
 		/// Source values. Each element have to be either JValue, or any basic c# object that can be changed to JValue.
 		/// </param>
 		/// <exception cref="JArgumentNullException">
 		/// If parameter is null.
+		/// </exception>
+		/// <exception cref="JArgumentException">
+		/// If any exceptions occurs when trying to turn parameter list to new JArray object.
 		/// </exception>
 		/// <exception cref="UnknownObjectTypeException">
 		/// If any value in parameter array/list is unsupported type.
@@ -42,13 +47,7 @@ namespace Leguar.TotalJSON {
 			if (sourceValues==null) {
 				throw (new JArgumentNullException("sourceValues","Parameter in constructor JArray.<init>(IList) can not be null"));
 			}
-			for (int n=0; n<sourceValues.Count; n++) {
-				JValue jValue=InternalTools.objectAsJValue(sourceValues[n]);
-				if (jValue==null) {
-					throw (new UnknownObjectTypeException(sourceValues[n],"sourceValues["+n+"]"));
-				}
-				Add(jValue);
-			}
+			InternalTools.listToJArray(sourceValues, this, new List<object>());
 		}
 
 		public override string ToString() {
@@ -885,6 +884,22 @@ namespace Leguar.TotalJSON {
 		}
 
 		/// <summary>
+		/// Gets the whole JArray object as system list. This is recursive, so if this list contains other lists or JSON objects,
+		/// those will be also changed to system objects.
+		/// </summary>
+		/// <returns>
+		/// List that doesn't contain any TotalJSON objects on any level.
+		/// </returns>
+		public List<object> AsList() {
+			List<object> targetValues = new List<object>();
+			foreach (JValue jValue in values) {
+				object oValue = InternalTools.jValueAsSystemObject(jValue);
+				targetValues.Add(oValue);
+			}
+			return targetValues;
+		}
+
+		/// <summary>
 		/// Turns this JSON array to single JSON formatted string.
 		/// String always starts with character '[' and ends to character ']'
 		/// </summary>
@@ -1173,6 +1188,9 @@ namespace Leguar.TotalJSON {
 			object obj = Activator.CreateInstance(type);
 
 			if (!(obj is IList)) {
+				if (type==typeof(object) && deserializeSettings.AllowFieldsToBeObjects) {
+					return this.AsList();
+				}
 				throw (DeserializeException.forNonMatchingType(this,type,toFieldName));
 			}
 			IList iList = (IList)(obj);
