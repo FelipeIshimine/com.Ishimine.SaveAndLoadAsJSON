@@ -6,6 +6,7 @@ namespace SaveSystem
 {
     public interface ISaveLoadAsJson 
     {
+        public const string VersionKey = "_V_";
         JSON SaveData { get; set;}
         int CurrentVersion { get; }
         string RootKey { get; }
@@ -24,43 +25,36 @@ namespace SaveSystem
     /// </summary>
     public static class ISaveAsJsonUtilities
     {
-        public const string VersionKey = "VERSION";
-
         public static bool IsOldVersion(this ISaveLoadAsJson source, JSON data)
         {
-            if (!data.ContainsKey(VersionKey))
-                throw new KeyNotFoundException($"El archivo NO contiene la VersionKey '{VersionKey}' para el tipo de archivo: {source.GetType()}");
+            if (!data.ContainsKey(ISaveLoadAsJson.VersionKey))
+            {
+                data.DebugInEditor($"Key:'{ISaveLoadAsJson.VersionKey}' not found");
+                throw new KeyNotFoundException($"El archivo NO contiene la VersionKey '{ISaveLoadAsJson.VersionKey}' para el tipo de archivo: {source.GetType()}");
+            }
 
-            int fileVersion = data.GetInt(VersionKey);
+            int fileVersion = data.GetInt(ISaveLoadAsJson.VersionKey);
             return fileVersion < source.CurrentVersion;
         }
 
-        public static JSON Save(this ISaveLoadAsJson @this)
+        public static JSON ManualSave(this ISaveLoadAsJson @this)
         {
+            @this.SaveData.Clear();
+            @this.SaveData.Add(ISaveLoadAsJson.VersionKey, @this.CurrentVersion);
             @this.OnBeforeSave();
+            @this.SaveData.AddOrReplace(ISaveLoadAsJson.VersionKey, @this.CurrentVersion);
             return @this.SaveData;
         }
         
-        public static void Save(this ISaveLoadAsJson @this, JSON mainData)
+        public static void ManualLoad(this ISaveLoadAsJson @this, JSON data)
         {
-            @this.OnBeforeSave();
-            var saveData = @this.SaveData;
-            if (saveData == null) return;
-            saveData.AddOrReplace(VersionKey, @this.CurrentVersion);
-            mainData.Add(@this.RootKey, saveData);
-        }
+            if(@this.IsOldVersion(data))
+                @this.UpdateSaveData(data);
 
-        public static void Load(this ISaveLoadAsJson source, JSON mainData)
-        {
-            if(!mainData.ContainsKey(source.RootKey)) return;
-            JSON loadData = mainData.GetJSON(source.RootKey);
-            
-            if (IsOldVersion(source, loadData))
-                source.UpdateSaveData(loadData);
-
-            source.SaveData = loadData;
-            source.OnAfterLoad();
+            @this.SaveData = data;
+            @this.OnAfterLoad();
         }
+        
     }
     
     public interface ISaveLoadAsJValue

@@ -69,8 +69,14 @@ public static class SaveLoadManager
     {
         Debug.Log($"Loading: {fileName}");
         string rawData = SaveLoadManager.LoadText(fileName);
-        if (string.IsNullOrEmpty(rawData)) return new JSON();
-        if (encriptionKey != 0) rawData = SecureHelper.EncryptDecrypt(rawData, encriptionKey);
+        if (string.IsNullOrEmpty(rawData))
+        {
+            Debug.LogWarning($"File Is Empty: {fileName}");
+            return new JSON();
+        }
+        if (encriptionKey != 0) 
+            rawData = SecureHelper.EncryptDecrypt(rawData, encriptionKey);
+        
         return JSON.ParseString(rawData);
     }
 }

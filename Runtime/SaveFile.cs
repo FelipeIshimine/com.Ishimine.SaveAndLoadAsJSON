@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Leguar.TotalJSON;
+using UnityEngine;
 
 namespace SaveSystem
 {
@@ -19,21 +20,24 @@ namespace SaveSystem
 
         public Action<JSON> OnUpdateAction { get; set; }
 
-        public void LoadFromDisk() => this.Load(SaveLoadManager.LoadEncryptedJson(Name, _encryptionKey));
+        public void LoadFromDisk()
+        {
+            SaveData = SaveLoadManager.LoadEncryptedJson(Name, _encryptionKey);
+            OnAfterLoad();
+        }
 
-        public void SaveToDisk() => SaveLoadManager.SaveEncryptedJson(this.Save(), Name, _encryptionKey);
+        public void SaveToDisk()
+        {
+            OnBeforeSave();
+            SaveLoadManager.SaveEncryptedJson(SaveData, Name, _encryptionKey);
+        }
 
         public void Erase() => SaveLoadManager.Delete(Name);
 
-        public void Register(ISaveLoadAsJson source)
-        {
-            _sources.Add(source.RootKey,source);
-        }
+        public void Register(ISaveLoadAsJson source) => _sources.Add(source.RootKey,source);
     
-        public void Unregister(ISaveLoadAsJson source)
-        {
+        public void Unregister(ISaveLoadAsJson source) =>
             _sources.Remove(source.RootKey);
-        }
 
         public JSON SaveData { get; set; } = new JSON();
         public int CurrentVersion { get; set; } = 0;
@@ -42,15 +46,20 @@ namespace SaveSystem
         
         public void OnBeforeSave()
         {
+            //Debug.Log($"*** OnBeforeSave {Name}");
             SaveData.Clear();
             foreach (ISaveLoadAsJson saveLoadAsJson in _sources.Values)
                 SaveData.Save(saveLoadAsJson);
+            
+            SaveData.DebugInEditor(Name);
         }
 
         public void OnAfterLoad()
         {
+            //Debug.Log($"*** OnAfterLoad {Name}");
             foreach (ISaveLoadAsJson saveLoadAsJson in _sources.Values)
-                saveLoadAsJson.Load(SaveData);
+                SaveData.Load(saveLoadAsJson);
+            SaveData.DebugInEditor(Name);
         }
     }
 }

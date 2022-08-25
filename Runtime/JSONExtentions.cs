@@ -1,17 +1,24 @@
 ﻿using Leguar.TotalJSON;
 using SaveSystem;
+using UnityEngine;
 
 public static class JSONExtentions
 {
-    public static void Save(this JSON @this, ISaveLoadAsJson data)
+    public static void Load(this JSON mainData, ISaveLoadAsJson source)
     {
-        data.OnBeforeSave();
-        var saveData = data.SaveData;
-        if (saveData == null) return;
-        saveData.AddOrReplace(ISaveAsJsonUtilities.VersionKey, data.CurrentVersion);
-        @this.Add(data.RootKey, saveData);
+        if (!mainData.ContainsKey(source.RootKey))
+            return;
+
+        JSON loadData = mainData.GetJSON(source.RootKey);
+        source.ManualLoad(loadData);
     }
     
+    public static void Save(this JSON @this, ISaveLoadAsJson data)
+    {
+        data.ManualSave();
+        if (data.SaveData == null) return;
+        @this.Add(data.RootKey, data.SaveData);
+    }
     
     public static bool TryGet<T>(this JSON @this, string key, out T value) where T : JValue
     {
