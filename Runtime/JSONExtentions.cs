@@ -46,4 +46,15 @@ public static class JSONExtentions
         value = default;
         return false;
     }
+    
+    public static bool TryGet(this JSON @this, string key, out string value)
+    {
+        if (@this.TryGet(key, out JString jValue))
+        {
+            value = jValue.AsString();
+            return true;
+        }
+        value = default;
+        return false;
+    }
 }
