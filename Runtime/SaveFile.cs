@@ -36,8 +36,7 @@ namespace SaveSystem
 
         public void Register(ISaveLoadAsJson source) => _sources.Add(source.RootKey,source);
     
-        public void Unregister(ISaveLoadAsJson source) =>
-            _sources.Remove(source.RootKey);
+        public void Unregister(ISaveLoadAsJson source) => _sources.Remove(source.RootKey);
 
         public JSON SaveData { get; set; } = new JSON();
         public int CurrentVersion { get; set; } = 0;

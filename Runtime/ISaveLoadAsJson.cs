@@ -39,6 +39,7 @@ namespace SaveSystem
 
         public static JSON ManualSave(this ISaveLoadAsJson @this)
         {
+            @this.SaveData ??= new JSON();
             @this.SaveData.Clear();
             @this.SaveData.Add(ISaveLoadAsJson.VersionKey, @this.CurrentVersion);
             @this.OnBeforeSave();
