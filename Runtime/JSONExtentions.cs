@@ -27,41 +27,47 @@ public static class JSONExtentions
             value = @this.Get(key) as T;
             return true;
         }
-        value = null;
+
+        value = default;
         return false;
     }
 		
-    public static bool TryGet(this JSON @this,string key, out bool value)
+    public static bool TryGet(this JSON @this,string key, ref bool value)
     {
         if (@this.TryGet(key, out JBoolean jValue))
         {
             value = jValue.AsBool();
             return true;
         }
-
-        value = default;
         return false;
     }
 		
-    public static bool TryGet(this JSON @this, string key, out int value)
+    public static bool TryGet(this JSON @this, string key, ref int value)
     {
         if (@this.TryGet(key, out JNumber jValue))
         {
             value = jValue.AsInt();
             return true;
         }
-        value = default;
+        return false;
+    }
+    public static bool TryGet(this JSON @this, string key, ref float value)
+    {
+        if (@this.TryGet(key, out JNumber jValue))
+        {
+            value = jValue.AsFloat();
+            return true;
+        }
         return false;
     }
     
-    public static bool TryGet(this JSON @this, string key, out string value)
+    public static bool TryGet(this JSON @this, string key, ref string value)
     {
         if (@this.TryGet(key, out JString jValue))
         {
             value = jValue.AsString();
             return true;
         }
-        value = default;
         return false;
     }
 }
